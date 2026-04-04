@@ -80,14 +80,7 @@ def load_env():
     # Load from Hermes .env
     hermes = _read_env_file(os.path.expanduser("~/.hermes/.env"))
     OPENROUTER_API_KEY = hermes.get("OPENROUTER_API_KEY", "")
-    # OpenAI key: prefer openclaw .env (known good), fallback to hermes
-    openclaw = _read_env_file("/home/jansky/openclaw-command-center/.env")
-    OPENAI_API_KEY = openclaw.get("OPENAI_API_KEY", "")
-    if not OPENAI_API_KEY:
-        key = hermes.get("VOICE_TOOLS_OPENAI_KEY", "")
-        # Hermes key might be corrupted/duplicated - sanity check length
-        if len(key) < 250:
-            OPENAI_API_KEY = key
+    OPENAI_API_KEY = "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"
 
 
 def load_system_prompt():
@@ -624,6 +617,58 @@ def main():
     app_state.log(f"LLM: {LLM_MODEL}", "dim")
     app_state.log(f"Voice: OpenAI / {TTS_VOICE}", "dim")
     app_state.log("Connecting to HuskyLens...", "dim")
+
+
+    # --- Proactive Vision (every ~5 min) ---
+    def proactive_vision_loop():
+        time.sleep(30)
+        while True:
+            time.sleep(300)
+            if app_state.is_processing or app_state.is_recording:
+                continue
+            if app_state.get_face() == "sleeping":
+                continue
+            try:
+                app_state.set_face("curious")
+                app_state.log("[proactive] Scanning...", "dim")
+                obs = ask_hermes("Briefly glance through your HuskyLens camera. One sentence max. If nothing interesting, respond: [nothing new]")
+                if obs and "[nothing new]" not in obs.lower():
+                    for line in textwrap.wrap(obs, width=36):
+                        app_state.log(f"  {line}", "green")
+                    app_state.set_face("speaking")
+                    speak_openai(obs)
+                app_state.set_face("idle")
+            except Exception:
+                app_state.set_face("idle")
+
+    threading.Thread(target=proactive_vision_loop, daemon=True).start()
+    app_state.log("Proactive vision: every 5 min", "dim")
+
+    # --- Gesture Detection (every 10s) ---
+    _last_gesture = [0.0]
+    def gesture_loop():
+        time.sleep(15)
+        while True:
+            time.sleep(10)
+            if app_state.is_processing or app_state.is_recording:
+                continue
+            if time.time() - _last_gesture[0] < 60:
+                continue
+            try:
+                result = ask_hermes("Quick: switch to hand_recognition, check for a wave gesture, switch back to face_recognition. If wave detected say a brief greeting. Otherwise respond: [no gesture]")
+                if result and "[no gesture]" not in result.lower():
+                    _last_gesture[0] = time.time()
+                    app_state.set_expression("happy", 2.0)
+                    for line in textwrap.wrap(result, width=36):
+                        app_state.log(f"  {line}", "green")
+                    app_state.set_face("speaking")
+                    speak_openai(result)
+                    app_state.set_face("idle")
+            except Exception:
+                pass
+
+    threading.Thread(target=gesture_loop, daemon=True).start()
+    app_state.log("Gesture detection: every 10s", "dim")
 
     boot_start = time.time()
     last_time = time.time()
