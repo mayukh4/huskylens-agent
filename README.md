@@ -1,90 +1,96 @@
 # TARS — HuskyLens V2 + Hermes Agent Face Display
 
-A matrix-style AI face display for Raspberry Pi that gives [Hermes Agent](https://github.com/NousResearch/hermes-agent) a physical presence — eyes (HuskyLens V2 camera), a voice (OpenAI TTS), ears (OpenAI Whisper STT), and a face (LCD touchscreen).
+A matrix-style AI face display for Raspberry Pi that gives [Hermes Agent](https://github.com/NousResearch/hermes-agent) a physical presence — eyes (HuskyLens V2 camera), a voice (OpenAI TTS/STT), and a face (LCD touchscreen). TARS personality from Interstellar. Humor setting at 75%.
 
 Built for the [@MayukhBuilds](https://www.youtube.com/@MayukhBuilds) YouTube channel.
 
-![TARS Face](https://img.shields.io/badge/TARS-Online-00ff46?style=flat-square)
-
 ## What It Does
 
-- **Matrix-style AI face** on a DSI touchscreen — ASCII humanoid silhouette with eyes, mouth, scanlines, glitch effects, and matrix rain
+- **Matrix-style AI face** on a DSI touchscreen — ASCII humanoid silhouette with animated eyes/mouth, scanlines, glitch effects, matrix rain
 - **Split screen**: 60% face (left), 40% conversation log (right)
-- **Tap-to-speak**: Touch anywhere on the screen to talk to the agent
-- **Voice pipeline**: Record → OpenAI Whisper STT → Hermes Agent (with HuskyLens vision) → OpenAI TTS (Onyx voice) → Speaker
-- **HuskyLens V2 MCP integration**: Hermes sees through the camera — face recognition, object detection, hand/pose tracking, OCR, and more
-- **TARS personality**: Dry wit, deadpan humor at 75%, inspired by TARS from Interstellar
-- **Hermes-driven**: The actual Hermes Agent is the brain — this display is a voice/visual frontend
+- **Tap-to-speak**: Touch anywhere on the touchscreen to talk to the agent
+- **Voice pipeline**: Record → OpenAI Whisper STT → Hermes Agent (with HuskyLens MCP vision tools) → OpenAI TTS (Onyx voice) → Speaker
+- **Proactive vision**: Every ~2 minutes, TARS looks through the camera and comments on what it sees in its signature dry, witty style
+- **HuskyLens V2 MCP**: 10 vision tools — face recognition, object detection, hand/pose tracking, OCR, QR codes, and more
+- **TARS personality**: Dry wit, deadpan humor, self-aware about being a camera on a Pi
+- **Hermes-driven**: The actual [Hermes Agent](https://github.com/NousResearch/hermes-agent) is the brain — this display is a voice/visual frontend. Hermes can also drive the face state remotely via Telegram, CLI, or HTTP API.
 
 ## Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────┐
-│                    DSI Touchscreen                       │
-│  ┌────────────────────┐  ┌───────────────────────────┐  │
-│  │   Matrix Face       │  │   TARS // COMMS LOG       │  │
-│  │   (ASCII silhouette │  │   > user messages         │  │
-│  │    with eyes/mouth) │  │     agent responses       │  │
-│  │                     │  │   [tool] vision calls     │  │
-│  │   [ PROCESSING ]    │  │                           │  │
-│  │                     │  │   TAP SCREEN TO SPEAK     │  │
-│  └────────────────────┘  └───────────────────────────┘  │
+│                    DSI Touchscreen (800x480)             │
+│  ┌──────────────────────┐ ┌───────────────────────────┐ │
+│  │   Matrix Face         │ │  TARS // COMMS LOG        │ │
+│  │   ASCII silhouette    │ │  > what do you see?       │ │
+│  │   with eyes & mouth   │ │  Sending to Hermes...     │ │
+│  │                       │ │  [tool] get_recognition   │ │
+│  │   [ PROCESSING ]      │ │    Face ID 1 detected.    │ │
+│  │                       │ │    That's you, Mayukh.    │ │
+│  └──────────────────────┘ │                           │ │
+│              [X]          │  TAP SCREEN TO SPEAK       │ │
+│                           └───────────────────────────┘ │
 └─────────────────────────────────────────────────────────┘
-         │                         │
-    Tap to speak              Flask API :5555
-         │                    (Hermes can drive
-         ▼                     face state too)
-   ┌───────────┐
-   │ Record    │──► OpenAI Whisper STT
-   │ (USB Mic) │
-   └───────────┘
-         │
-         ▼
-   ┌───────────┐    ┌──────────────────┐
-   │  Hermes   │◄──►│  HuskyLens V2    │
-   │  Agent    │    │  MCP Server      │
-   │  (brain)  │    │  (10 vision      │
-   │           │    │   tools via SSE) │
-   └───────────┘    └──────────────────┘
-         │
-         ▼
-   ┌───────────┐
-   │ OpenAI    │──► PipeWire ──► USB Speaker
-   │ TTS Onyx  │
-   └───────────┘
+
+Tap screen ──► Record (USB Mic, 44100Hz)
+                 │
+                 ▼
+           OpenAI Whisper STT
+                 │
+                 ▼
+          ┌─────────────┐     ┌──────────────────┐
+          │ Hermes Agent │◄───►│ HuskyLens V2 MCP │
+          │ (the brain)  │     │ 10 vision tools  │
+          │ TARS persona │     │ via SSE transport│
+          └──────┬──────┘     └──────────────────┘
+                 │
+                 ▼
+           OpenAI TTS (Onyx voice)
+                 │
+                 ▼
+           PipeWire ──► USB Speaker
+
+  ┌──────────────────────────────────────┐
+  │  Proactive Vision Loop (every 2 min) │
+  │  TARS looks through camera and       │
+  │  comments on what it sees            │
+  └──────────────────────────────────────┘
 ```
 
 ## Hardware
 
-- Raspberry Pi 5
-- [HuskyLens V2](https://www.dfrobot.com/product-2995.html) (SEN0638) — connected via USB
-- DSI touchscreen (800x480)
-- USB microphone
-- USB speaker
+| Component | Details |
+|-----------|---------|
+| Computer | Raspberry Pi 5 |
+| Camera | [HuskyLens V2](https://www.dfrobot.com/product-2995.html) (SEN0638) via USB |
+| Display | DSI touchscreen (800×480) |
+| Microphone | USB mic (PCM2902 Audio Codec) |
+| Speaker | USB speaker (via HuskyLens USB audio / Jieli UACDemo) |
 
 ## Prerequisites
 
-- [Hermes Agent](https://github.com/NousResearch/hermes-agent) installed and configured
-- HuskyLens V2 with MCP Service enabled and connected via USB
+- [Hermes Agent](https://github.com/NousResearch/hermes-agent) v0.7+ installed and configured
+- HuskyLens V2 with MCP Service enabled (firmware v1.1.6+), WiFi module connected, plugged in via USB
 - OpenAI API key (for Whisper STT and TTS)
-- OpenRouter API key (for Hermes LLM)
-- Python 3.11+ with: `pygame`, `flask`, `sounddevice`, `numpy`, `requests`, `mcp`
+- OpenRouter API key (for Hermes LLM backend)
 - PipeWire audio server (default on Raspberry Pi OS)
 - `ffmpeg` installed
 
-## Setup
+## Quick Start
 
-### 1. Install dependencies
+### 1. Install Python dependencies
 
 ```bash
 pip install --break-system-packages pygame flask sounddevice numpy requests mcp
 ```
 
-### 2. Configure HuskyLens MCP in Hermes
+### 2. Patch Hermes for SSE transport
 
-The HuskyLens V2 creates a USB network (Pi: 192.168.88.2, HuskyLens: 192.168.88.1). Its MCP server runs at `http://192.168.88.1:3000/sse`.
+The HuskyLens V2 MCP server uses SSE transport, but Hermes only supports StreamableHTTP. Apply the patch documented in `patches/hermes_sse_transport.md`.
 
-Hermes Agent uses StreamableHTTP transport by default, but HuskyLens uses SSE. A patch to `~/.hermes/hermes-agent/tools/mcp_tool.py` adds SSE fallback support. See `patches/hermes_sse_transport.md` for details.
+### 3. Configure HuskyLens MCP in Hermes
+
+The HuskyLens creates a USB network when connected (Pi: `192.168.88.2`, HuskyLens: `192.168.88.1`).
 
 Add to `~/.hermes/config.yaml`:
 
@@ -97,88 +103,104 @@ mcp_servers:
     connect_timeout: 15
 ```
 
-Verify: `hermes mcp test huskylens`
+Verify with: `hermes mcp test huskylens` — should show 10 tools.
 
-### 3. Install the SOUL.md personality
+### 4. Install TARS personality
 
 ```bash
 cp soul/SOUL.md ~/.hermes/SOUL.md
 ```
 
-### 4. Set up API keys
+### 5. Set API keys
 
-The app reads keys from:
-- `~/.hermes/.env` → `OPENROUTER_API_KEY`
-- OpenAI key from your environment (or configure in `.env`)
+The face server reads `OPENROUTER_API_KEY` from `~/.hermes/.env`. Set your OpenAI API key in the `face/face_server.py` `_OPENAI_API_KEY` constant (or via environment).
 
-### 5. Run
+### 6. Run
 
 ```bash
-# From the Pi desktop — tap the TARS icon
-# Or from terminal:
+# Desktop: tap the TARS icon on the Pi desktop
+# Or terminal:
 ./scripts/start_all.sh
 ```
 
-### 6. Desktop shortcut
+### 7. Desktop shortcut (optional)
 
 ```bash
 cp tars.desktop ~/Desktop/TARS.desktop
 chmod +x ~/Desktop/TARS.desktop
 ```
 
-## Hermes Skill Installation
+## Usage
 
-To install as a Hermes Agent skill:
-
-```bash
-cp -r skill ~/.hermes/skills/hardware/tars-vision
-hermes skills list  # should show tars-vision
-```
+- **Tap anywhere** on the touchscreen to start speaking. TARS listens until you stop talking (1.2s silence threshold), transcribes, sends to Hermes, and responds through the speaker.
+- **Proactive vision**: Every ~2 minutes, TARS looks through the camera and makes a witty observation about what it sees — even if it's just you sitting there.
+- **Exit**: Tap the [X] button in the top-right corner, or press Escape/Q.
+- **Remote control**: Hermes can drive the face from Telegram or CLI:
+  ```bash
+  curl -X POST localhost:5555/state -H 'Content-Type: application/json' \
+    -d '{"state":"happy"}'
+  ```
 
 ## Face States
 
-The face display responds to state changes via HTTP:
-
-```bash
-curl -X POST localhost:5555/state -H 'Content-Type: application/json' \
-  -d '{"state":"thinking"}'
-```
-
-| State | Visual | When |
-|-------|--------|------|
-| `idle` | Calm glow, slow rain, gentle blink | Standby |
-| `listening` | Brighter, wider eyes | User speaking |
-| `recording` | Bright glow, red status | Recording audio |
-| `thinking` | Fast rain, glitches, pupils move | Processing |
+| State | Visual Effect | Trigger |
+|-------|--------------|---------|
+| `idle` | Calm glow, slow rain, gentle blink | Default standby |
+| `listening` | Brighter eyes, wider | User tapped screen |
+| `recording` | Bright glow, red "RECORDING" label | Recording audio |
+| `thinking` | Fast rain, glitches, pupils drift | Processing query |
 | `speaking` | Pulsing mouth, moderate glow | TTS playing |
 | `curious` | Asymmetric eyes, wave distortion | Using vision tools |
-| `happy` | Squinted eyes, bright glow | Recognized someone |
+| `happy` | Squinted eyes, bright | Recognized someone |
 | `surprised` | Wide eyes, heavy glitch | Unexpected input |
-| `sleeping` | Dim, minimal rain | Low power |
+| `sleeping` | Dim, minimal rain | Low power mode |
+
+## Hermes Skill
+
+Install as a Hermes Agent skill:
+
+```bash
+mkdir -p ~/.hermes/skills/hardware/tars-vision
+cp skill/SKILL.md ~/.hermes/skills/hardware/tars-vision/
+```
 
 ## File Structure
 
 ```
 huskylens-agent/
 ├── face/
-│   ├── face_server.py        # Main app: pygame + Flask + voice pipeline
-│   ├── face_renderer.py      # Matrix face renderer with eyes/mouth
-│   └── face_animations.py    # State machine and animation params
+│   ├── face_server.py          # Main app: pygame + Flask + voice + proactive vision
+│   ├── face_renderer.py        # Matrix face renderer with eyes/mouth
+│   └── face_animations.py      # State machine and animation parameters
 ├── soul/
-│   └── SOUL.md               # TARS personality for Hermes
+│   └── SOUL.md                 # TARS personality for Hermes Agent
 ├── skill/
-│   └── SKILL.md              # Hermes Agent skill definition
+│   └── SKILL.md                # Hermes Agent skill definition
 ├── patches/
-│   └── hermes_sse_transport.md  # SSE transport patch for Hermes MCP
+│   └── hermes_sse_transport.md # SSE transport patch for Hermes MCP client
 ├── scripts/
-│   ├── start_all.sh          # Launch the face display
-│   ├── stop_all.sh           # Stop all processes
-│   ├── test_mcp.py           # Test HuskyLens MCP connection
-│   └── test_face.py          # Cycle through face states
-├── tars.desktop              # Desktop shortcut for Pi
+│   ├── start_all.sh            # Launch TARS face display
+│   ├── stop_all.sh             # Stop all processes
+│   ├── test_mcp.py             # Test HuskyLens MCP connectivity
+│   └── test_face.py            # Cycle through face animation states
+├── tars.desktop                # Desktop shortcut for Raspberry Pi
 ├── requirements.txt
 └── README.md
 ```
+
+## How It Works
+
+1. **Face Display** (`face_server.py`) runs as the main process on the Pi, rendering the matrix face on the DSI touchscreen and exposing a Flask API on port 5555.
+
+2. **Voice input** is triggered by touching the screen. Audio is recorded from the USB mic at its native 44100Hz, resampled to 16kHz, and sent to OpenAI Whisper for transcription.
+
+3. **Hermes Agent** receives the transcribed text via `hermes chat -q "text" -Q` (single-query quiet mode). Hermes uses its TARS personality (from SOUL.md), calls HuskyLens MCP tools to see through the camera, and returns a response.
+
+4. **TTS** converts the response to speech via OpenAI's Onyx voice, boosted +4dB via ffmpeg, and played through PipeWire to the USB speaker.
+
+5. **Proactive vision** runs in a background thread. Every ~2 minutes, it asks Hermes to look through the camera and comment on what it sees — keeping TARS feeling alive and observant even when you're not talking to it.
+
+6. **Remote control**: Since Hermes runs independently (gateway, Telegram, CLI), it can also drive the face state via the Flask API — e.g., setting the face to "happy" when it recognizes you via Telegram.
 
 ## License
 
@@ -186,6 +208,6 @@ MIT
 
 ## Credits
 
-Built by [Mayukh Bagchi](https://www.youtube.com/@MayukhBuilds) with Claude Code.
+Built by [Mayukh Bagchi](https://www.youtube.com/@MayukhBuilds) with [Claude Code](https://claude.ai/code).
 
-HuskyLens V2 by [DFRobot](https://www.dfrobot.com/). Hermes Agent by [Nous Research](https://github.com/NousResearch/hermes-agent).
+[HuskyLens V2](https://www.dfrobot.com/product-2995.html) by DFRobot. [Hermes Agent](https://github.com/NousResearch/hermes-agent) by Nous Research.

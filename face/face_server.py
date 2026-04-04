@@ -621,9 +621,9 @@ def main():
 
     # --- Proactive Vision (every ~5 min) ---
     def proactive_vision_loop():
-        time.sleep(30)
+        time.sleep(60)  # Wait 1 min after boot
         while True:
-            time.sleep(300)
+            time.sleep(120)  # Every 2 minutes
             if app_state.is_processing or app_state.is_recording:
                 continue
             if app_state.get_face() == "sleeping":
@@ -631,8 +631,10 @@ def main():
             try:
                 app_state.set_face("curious")
                 app_state.log("[proactive] Scanning...", "dim")
-                obs = ask_hermes("Briefly glance through your HuskyLens camera. One sentence max. If nothing interesting, respond: [nothing new]")
-                if obs and "[nothing new]" not in obs.lower():
+                app_state.log("[proactive] Asking Hermes...", "dim")
+                obs = ask_hermes("Look through your HuskyLens camera right now. Describe what you see in one witty sentence — your usual TARS style. Even if it is the same person sitting there, comment on it. Be observational, dry, funny.")
+                app_state.log(f"[proactive] Got: {obs[:50]}...", "dim")
+                if obs and len(obs) > 5:
                     for line in textwrap.wrap(obs, width=36):
                         app_state.log(f"  {line}", "green")
                     app_state.set_face("speaking")
@@ -644,31 +646,6 @@ def main():
     threading.Thread(target=proactive_vision_loop, daemon=True).start()
     app_state.log("Proactive vision: every 5 min", "dim")
 
-    # --- Gesture Detection (every 10s) ---
-    _last_gesture = [0.0]
-    def gesture_loop():
-        time.sleep(15)
-        while True:
-            time.sleep(10)
-            if app_state.is_processing or app_state.is_recording:
-                continue
-            if time.time() - _last_gesture[0] < 60:
-                continue
-            try:
-                result = ask_hermes("Quick: switch to hand_recognition, check for a wave gesture, switch back to face_recognition. If wave detected say a brief greeting. Otherwise respond: [no gesture]")
-                if result and "[no gesture]" not in result.lower():
-                    _last_gesture[0] = time.time()
-                    app_state.set_expression("happy", 2.0)
-                    for line in textwrap.wrap(result, width=36):
-                        app_state.log(f"  {line}", "green")
-                    app_state.set_face("speaking")
-                    speak_openai(result)
-                    app_state.set_face("idle")
-            except Exception:
-                pass
-
-    threading.Thread(target=gesture_loop, daemon=True).start()
-    app_state.log("Gesture detection: every 10s", "dim")
 
     boot_start = time.time()
     last_time = time.time()
