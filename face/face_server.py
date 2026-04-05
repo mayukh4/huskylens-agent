@@ -594,16 +594,14 @@ def main():
                 app_state.set_face("curious")
                 app_state.log("[heartbeat] Checking...", "dim")
 
-                # --- Face + Emotion via multi-algorithm (single switch) ---
+                # --- Sequential: Face recognition, then Emotion ---
                 face_info = "Nobody is around."
                 mood_info = ""
-                try:
-                    # Enter multi-algo: face + emotion simultaneously
-                    uart_client.set_multi_algorithm_safe(
-                        [ALGORITHM_FACE_RECOGNITION, ALGORITHM_EMOTION_RECOGNITION])
-                    time.sleep(4)  # Give firmware time to stabilize
 
-                    # Poll face results
+                # Step 1: Face recognition
+                try:
+                    uart_client.switch_algorithm_safe(ALGORITHM_FACE_RECOGNITION)
+                    time.sleep(3)
                     for _ in range(3):
                         faces = uart_client.get_face_data()
                         if faces:
@@ -614,19 +612,24 @@ def main():
                                 face_info = "Someone unfamiliar is here."
                             break
                         time.sleep(0.5)
-
-                    # Poll emotion results
-                    for _ in range(3):
-                        emotions = uart_client.get_emotion_data()
-                        if emotions:
-                            mood = emotions[0]["emotion"]
-                            if mood != "neutral":
-                                mood_info = f"They seem {mood}."
-                            break
-                        time.sleep(0.5)
-
                 except Exception as e:
-                    app_state.log(f"[heartbeat] Vision err: {str(e)[:30]}", "red")
+                    app_state.log(f"[heartbeat] Face err: {str(e)[:30]}", "red")
+
+                # Step 2: Emotion detection (only if someone was found)
+                if "here" in face_info:
+                    try:
+                        uart_client.switch_algorithm_safe(ALGORITHM_EMOTION_RECOGNITION)
+                        time.sleep(3)
+                        for _ in range(3):
+                            emotions = uart_client.get_emotion_data()
+                            if emotions:
+                                mood = emotions[0]["emotion"]
+                                if mood != "neutral":
+                                    mood_info = f"They seem {mood}."
+                                break
+                            time.sleep(0.5)
+                    except Exception as e:
+                        app_state.log(f"[heartbeat] Mood err: {str(e)[:30]}", "red")
 
                 context = f"{face_info} {mood_info}".strip()
                 app_state.log(f"[heartbeat] {context}", "dim")
