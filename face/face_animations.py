@@ -76,6 +76,9 @@ class FaceAnimator:
         self._blink_phase = -1.0
         self._pupil_drift = (0.0, 0.0)
         self._pupil_timer = time.time() + 2.0
+        # Vision router gaze override
+        self.vision_pupil_x = None  # Set by vision router; None = use default drift
+        self.vision_pupil_y = None
 
     def set_state(self, state: FaceState):
         if state != self.state:
@@ -221,13 +224,18 @@ class FaceAnimator:
         if self.state == FaceState.SPEAKING:
             p.mouth_openness = 0.1 + 0.35 * abs(math.sin(elapsed * 4.5 * math.pi))
 
-        # Idle pupil drift
+        # Idle pupil drift (overridden by vision router gaze when available)
         if self.state in (FaceState.IDLE, FaceState.LISTENING):
-            if now >= self._pupil_timer:
-                self._pupil_drift = (random.uniform(-0.2, 0.2), random.uniform(-0.15, 0.15))
-                self._pupil_timer = now + random.uniform(2, 5)
-            p.pupil_x = lerp(p.pupil_x, self._pupil_drift[0], t * 0.3)
-            p.pupil_y = lerp(p.pupil_y, self._pupil_drift[1], t * 0.3)
+            if self.vision_pupil_x is not None and self.vision_pupil_y is not None:
+                # Vision router gaze tracking — smooth lerp toward gaze target
+                p.pupil_x = lerp(p.pupil_x, self.vision_pupil_x, t * 0.5)
+                p.pupil_y = lerp(p.pupil_y, self.vision_pupil_y, t * 0.5)
+            else:
+                if now >= self._pupil_timer:
+                    self._pupil_drift = (random.uniform(-0.2, 0.2), random.uniform(-0.15, 0.15))
+                    self._pupil_timer = now + random.uniform(2, 5)
+                p.pupil_x = lerp(p.pupil_x, self._pupil_drift[0], t * 0.3)
+                p.pupil_y = lerp(p.pupil_y, self._pupil_drift[1], t * 0.3)
 
         # Thinking pupil movement
         if self.state == FaceState.THINKING:

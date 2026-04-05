@@ -4,7 +4,7 @@ TARS Face Display — Matrix AI face with conversation panel.
 
 Left 60%: Matrix-style face with eyes/mouth
 Right 40%: Conversation log + status
-Touch anywhere: tap-to-speak (record -> STT -> LLM+MCP -> TTS -> speaker)
+Touch anywhere: tap-to-speak (record -> STT -> Hermes -> TTS -> speaker)
 Top-right X button: exit
 
 Hermes can drive face state via:
@@ -14,7 +14,6 @@ Hermes can drive face state via:
 import os
 import sys
 import time
-import json
 import re
 import wave
 import tempfile
@@ -36,9 +35,13 @@ sys.path.insert(0, os.path.dirname(__file__))
 from face_animations import FaceAnimator, FaceState
 from face_renderer import FaceRenderer, SCREEN_W, SCREEN_H, FACE_W, PANEL_W, PANEL_X
 from face_renderer import BLACK, GREEN_BRIGHT, GREEN_MID, GREEN_DIM, GREEN_FAINT, BORDER_COLOR, PANEL_BG, RED_DIM
+from vision_router import VisionRouter
+from huskylens_uart import (HuskyLensI2C, ALGORITHM_FACE_RECOGNITION,
+                            ALGORITHM_HAND_RECOGNITION, ALGORITHM_EMOTION_RECOGNITION,
+                            EMOTION_NAMES)
 
 # --- Config ---
-HUSKYLENS_MCP_URL = "http://192.168.88.1:3000/sse"
+HUSKYLENS_I2C_BUS = 1
 LLM_MODEL = "qwen/qwen3.6-plus:free"
 OPENROUTER_API_KEY = ""
 OPENAI_API_KEY = ""
@@ -80,7 +83,7 @@ def load_env():
     # Load from Hermes .env
     hermes = _read_env_file(os.path.expanduser("~/.hermes/.env"))
     OPENROUTER_API_KEY = hermes.get("OPENROUTER_API_KEY", "")
-    OPENAI_API_KEY = "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"
+    OPENAI_API_KEY = os.environ.get("OPENAI_API_KEY", "")
 
 
 def load_system_prompt():
@@ -207,69 +210,9 @@ def run_flask():
     flask_app.run(host='0.0.0.0', port=5555, threaded=True)
 
 
-# --- MCP Client ---
-class HuskyLensMCP:
-    def __init__(self):
-        self._session = None
-        self._tools = []
-        self._loop = None
-        self._thread = None
-        self._ready = threading.Event()
-
-    def start(self):
-        import asyncio
-        self._loop = asyncio.new_event_loop()
-        self._thread = threading.Thread(target=self._run, daemon=True)
-        self._thread.start()
-        if self._ready.wait(timeout=15):
-            app_state.log(f"MCP: {len(self._tools)} vision tools online", "green")
-        else:
-            app_state.log("MCP: connection timeout", "red")
-
-    def _run(self):
-        import asyncio
-        asyncio.set_event_loop(self._loop)
-        try:
-            self._loop.run_until_complete(self._connect())
-        except Exception as e:
-            app_state.log(f"MCP error: {e}", "red")
-
-    async def _connect(self):
-        from mcp.client.sse import sse_client
-        from mcp import ClientSession
-        async with sse_client(HUSKYLENS_MCP_URL) as (r, w):
-            async with ClientSession(r, w) as session:
-                await session.initialize()
-                self._tools = (await session.list_tools()).tools
-                self._session = session
-                self._ready.set()
-                import asyncio
-                while True:
-                    await asyncio.sleep(1)
-
-    def get_tools_for_llm(self):
-        return [{
-            "type": "function",
-            "function": {
-                "name": f"mcp_huskylens_{t.name}",
-                "description": (t.description or "")[:400],
-                "parameters": t.inputSchema if hasattr(t, 'inputSchema') else {"type": "object", "properties": {}},
-            },
-        } for t in self._tools]
-
-    def call_tool(self, name, args):
-        import asyncio
-        real = name.replace("mcp_huskylens_", "")
-        fut = asyncio.run_coroutine_threadsafe(self._session.call_tool(real, args), self._loop)
-        result = fut.result(timeout=30)
-        return "\n".join(it.text if hasattr(it, "text") else str(it) for it in result.content)
-
-    @property
-    def connected(self):
-        return self._ready.is_set()
-
-
-mcp_client = HuskyLensMCP()
+# --- HuskyLens UART Client ---
+uart_client = None   # Initialized in main()
+vision_router = None  # Initialized in main()
 
 
 # --- Voice Pipeline ---
@@ -445,49 +388,57 @@ def speak_openai(text):
 
 def handle_voice_input():
     """Full voice pipeline: record -> STT -> LLM -> TTS."""
-    app_state.is_processing = True
-    app_state.is_recording = True
-    app_state.set_face("recording")
-    app_state.log("Recording...", "bright")
+    # Pause vision router during voice interaction
+    if vision_router:
+        vision_router.pause()
+    try:
+        app_state.is_processing = True
+        app_state.is_recording = True
+        app_state.set_face("recording")
+        app_state.log("Recording...", "bright")
 
-    wav = record_audio_blocking()
-    app_state.is_recording = False
+        wav = record_audio_blocking()
+        app_state.is_recording = False
 
-    if not wav:
-        app_state.log("No speech detected.", "dim")
+        if not wav:
+            app_state.log("No speech detected.", "dim")
+            app_state.set_face("idle")
+            app_state.is_processing = False
+            return
+
+        app_state.set_face("thinking")
+        app_state.log("Transcribing...", "dim")
+        text = transcribe_openai(wav)
+        if not text:
+            app_state.log("Couldn't transcribe.", "dim")
+            app_state.set_face("idle")
+            app_state.is_processing = False
+            return
+
+        app_state.log(f"> {text}", "bright")
+        app_state.set_face("thinking")
+        app_state.log("Sending to Hermes...", "dim")
+
+        response = ask_hermes(text)
+
+        # Parse emotion tag
+        m = re.match(r'\[(happy|curious|surprised|neutral|thinking)\]', response)
+        if m and m.group(1) != "neutral":
+            app_state.set_expression(m.group(1), 3.0)
+
+        clean = re.sub(r'\[(?:happy|curious|surprised|neutral|thinking)\]\s*', '', response)
+        for line in textwrap.wrap(clean, width=36):
+            app_state.log(f"  {line}", "green")
+
+        app_state.set_face("speaking")
+        speak_openai(response)
         app_state.set_face("idle")
+
         app_state.is_processing = False
-        return
-
-    app_state.set_face("thinking")
-    app_state.log("Transcribing...", "dim")
-    text = transcribe_openai(wav)
-    if not text:
-        app_state.log("Couldn't transcribe.", "dim")
-        app_state.set_face("idle")
-        app_state.is_processing = False
-        return
-
-    app_state.log(f"> {text}", "bright")
-    app_state.set_face("thinking")
-    app_state.log("Sending to Hermes...", "dim")
-
-    response = ask_hermes(text)
-
-    # Parse emotion tag
-    m = re.match(r'\[(happy|curious|surprised|neutral|thinking)\]', response)
-    if m and m.group(1) != "neutral":
-        app_state.set_expression(m.group(1), 3.0)
-
-    clean = re.sub(r'\[(?:happy|curious|surprised|neutral|thinking)\]\s*', '', response)
-    for line in textwrap.wrap(clean, width=36):
-        app_state.log(f"  {line}", "green")
-
-    app_state.set_face("speaking")
-    speak_openai(response)
-    app_state.set_face("idle")
-
-    app_state.is_processing = False
+    finally:
+        # Always resume vision router
+        if vision_router:
+            vision_router.resume()
 
 
 # --- Panel Renderer ---
@@ -592,8 +543,9 @@ def main():
     detect_mic()
     detect_speaker()
 
-    # MCP is handled by Hermes Agent directly
-    app_state.log("MCP: managed by Hermes", "dim")
+    # Start HuskyLens I2C client
+    global uart_client
+    uart_client = HuskyLensI2C(bus=HUSKYLENS_I2C_BUS)
 
     # Start Flask
     threading.Thread(target=run_flask, daemon=True).start()
@@ -616,36 +568,115 @@ def main():
     app_state.log(f"Speaker: {SPEAKER_CARD}", "dim")
     app_state.log(f"LLM: {LLM_MODEL}", "dim")
     app_state.log(f"Voice: OpenAI / {TTS_VOICE}", "dim")
-    app_state.log("Connecting to HuskyLens...", "dim")
+    if uart_client and uart_client.connected:
+        app_state.log(f"HuskyLens I2C: bus {HUSKYLENS_I2C_BUS}", "green")
+    else:
+        app_state.log("HuskyLens I2C: not connected", "red")
 
 
-    # --- Proactive Vision (every ~5 min) ---
-    def proactive_vision_loop():
-        time.sleep(60)  # Wait 1 min after boot
+    # --- Hermes Heartbeat (every ~5 min) ---
+    def hermes_heartbeat_loop():
+        """Periodic face + mood check via I2C, then Hermes greeting."""
+        time.sleep(90)  # Wait 1.5 min after boot
         while True:
-            time.sleep(120)  # Every 2 minutes
+            time.sleep(300)  # Every 5 minutes
             if app_state.is_processing or app_state.is_recording:
                 continue
             if app_state.get_face() == "sleeping":
                 continue
+            if not uart_client or not uart_client.connected:
+                continue
             try:
+                # Pause gesture detection
+                if vision_router:
+                    vision_router.pause()
+
                 app_state.set_face("curious")
-                app_state.log("[proactive] Scanning...", "dim")
-                app_state.log("[proactive] Asking Hermes...", "dim")
-                obs = ask_hermes("Look through your HuskyLens camera right now. Describe what you see in one witty sentence — your usual TARS style. Even if it is the same person sitting there, comment on it. Be observational, dry, funny.")
-                app_state.log(f"[proactive] Got: {obs[:50]}...", "dim")
+                app_state.log("[heartbeat] Checking...", "dim")
+
+                # --- Face + Emotion via multi-algorithm (single switch) ---
+                face_info = "Nobody is around."
+                mood_info = ""
+                try:
+                    # Enter multi-algo: face + emotion simultaneously
+                    uart_client.set_multi_algorithm_safe(
+                        [ALGORITHM_FACE_RECOGNITION, ALGORITHM_EMOTION_RECOGNITION])
+                    time.sleep(4)  # Give firmware time to stabilize
+
+                    # Poll face results
+                    for _ in range(3):
+                        faces = uart_client.get_face_data()
+                        if faces:
+                            f = faces[0]
+                            if f["name"]:
+                                face_info = f"{f['name']} is here."
+                            else:
+                                face_info = "Someone unfamiliar is here."
+                            break
+                        time.sleep(0.5)
+
+                    # Poll emotion results
+                    for _ in range(3):
+                        emotions = uart_client.get_emotion_data()
+                        if emotions:
+                            mood = emotions[0]["emotion"]
+                            if mood != "neutral":
+                                mood_info = f"They seem {mood}."
+                            break
+                        time.sleep(0.5)
+
+                except Exception as e:
+                    app_state.log(f"[heartbeat] Vision err: {str(e)[:30]}", "red")
+
+                context = f"{face_info} {mood_info}".strip()
+                app_state.log(f"[heartbeat] {context}", "dim")
+
+                # Ask Hermes with face + mood context
+                obs = ask_hermes(
+                    f"Quick status: {context} "
+                    "React naturally — if someone's here, say something to them "
+                    "(acknowledge their mood if relevant). If nobody's around, "
+                    "mutter something to yourself. One sentence, stay in character."
+                )
+
                 if obs and len(obs) > 5:
-                    for line in textwrap.wrap(obs, width=36):
+                    m = re.match(r'\[(happy|curious|surprised|neutral|thinking)\]', obs)
+                    if m and m.group(1) != "neutral":
+                        app_state.set_expression(m.group(1), 3.0)
+                    clean = re.sub(r'\[(?:happy|curious|surprised|neutral|thinking)\]\s*', '', obs)
+
+                    for line in textwrap.wrap(clean, width=36):
                         app_state.log(f"  {line}", "green")
                     app_state.set_face("speaking")
                     speak_openai(obs)
-                app_state.set_face("idle")
-            except Exception:
-                app_state.set_face("idle")
 
-    threading.Thread(target=proactive_vision_loop, daemon=True).start()
-    app_state.log("Proactive vision: every 5 min", "dim")
+                app_state.set_face("idle")
+            except Exception as e:
+                app_state.log(f"[heartbeat] Error: {str(e)[:40]}", "red")
+                app_state.set_face("idle")
+            finally:
+                # ALWAYS switch back to hand recognition and resume
+                try:
+                    uart_client.switch_algorithm_safe(ALGORITHM_HAND_RECOGNITION)
+                    time.sleep(3)  # Give firmware time to stabilize
+                except Exception:
+                    pass
+                if vision_router:
+                    vision_router.resume()
 
+    threading.Thread(target=hermes_heartbeat_loop, daemon=True).start()
+    app_state.log("Hermes heartbeat: every 5 min", "dim")
+
+    # --- Vision Router (gesture control via I2C) ---
+    global vision_router
+    vision_router = VisionRouter(
+        uart_client=uart_client,
+        app_state=app_state,
+        log_fn=app_state.log,
+        hermes_fn=ask_hermes,
+        speak_fn=speak_openai,
+    )
+    vision_router.start()
 
     boot_start = time.time()
     last_time = time.time()
