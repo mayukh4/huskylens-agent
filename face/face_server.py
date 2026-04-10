@@ -34,8 +34,9 @@ import sounddevice as sd
 
 sys.path.insert(0, os.path.dirname(__file__))
 from face_animations import FaceAnimator, FaceState
-from face_renderer import FaceRenderer, SCREEN_W, SCREEN_H, FACE_W, PANEL_W, PANEL_X
+from face_renderer import SCREEN_W, SCREEN_H, FACE_W, PANEL_W, PANEL_X
 from face_renderer import BLACK, GREEN_BRIGHT, GREEN_MID, GREEN_DIM, GREEN_FAINT, BORDER_COLOR, PANEL_BG, RED_DIM
+from face_pixel_art import PixelArtFaceRenderer
 
 # --- Config ---
 HUSKYLENS_MCP_URL = "http://192.168.88.1:3000/sse"
@@ -614,7 +615,7 @@ def main():
     pygame.mouse.set_visible(False)
 
     clock = pygame.time.Clock()
-    face_renderer = FaceRenderer()
+    face_renderer = PixelArtFaceRenderer()
     panel_renderer = PanelRenderer()
     animator = FaceAnimator()
 

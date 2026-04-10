@@ -1,0 +1,360 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TARS Pixel Art Face - Preview</title>
+<style>
+  * { margin: 0; padding: 0; }
+  body { background: #000; overflow: hidden; display: flex; justify-content: center; align-items: center; height: 100vh; }
+  canvas { display: block; image-rendering: pixelated; }
+  #info { position: fixed; top: 10px; left: 10px; color: #0f0; font: 11px monospace; opacity: 0.6; }
+</style>
+</head>
+<body>
+<div id="info">TARS Pixel Art Face Preview<br>Click to cycle states</div>
+<canvas id="c"></canvas>
+<canvas id="face" style="display:none"></canvas>
+<script>
+const c = document.getElementById('c');
+const ctx = c.getContext('2d');
+const PW = 480, PH = 480;
+
+function resize() {
+  const scale = Math.min(window.innerWidth / PW, window.innerHeight / PH);
+  c.style.width = Math.floor(PW * scale) + 'px';
+  c.style.height = Math.floor(PH * scale) + 'px';
+  c.width = PW; c.height = PH;
+}
+resize();
+window.addEventListener('resize', resize);
+
+// Hidden canvas for face map
+const faceCanvas = document.getElementById('face');
+const fctx = faceCanvas.getContext('2d');
+faceCanvas.width = PW;
+faceCanvas.height = PH;
+
+const fcx = PW / 2;
+const fcy = PH * 0.40;
+const sx = PW / 160;
+const sy = PH / 200;
+
+// States
+const states = ['IDLE', 'LISTENING', 'THINKING', 'SPEAKING', 'HAPPY', 'SURPRISED'];
+let stateIdx = 0;
+let eyeOpenness = 1.0;
+let pupilX = 0.0, pupilY = 0.0;
+let mouthOpenness = 0.0, mouthSmile = 0.1;
+let glowIntensity = 0.6, speedMult = 1.0, glitchChance = 0.02;
+
+c.addEventListener('click', () => {
+  stateIdx = (stateIdx + 1) % states.length;
+  const s = states[stateIdx];
+  document.getElementById('info').innerHTML = `TARS Pixel Art Face Preview<br>State: ${s}<br>Click to cycle`;
+  switch(s) {
+    case 'IDLE': eyeOpenness=1; glowIntensity=0.55; speedMult=0.8; glitchChance=0.01; mouthOpenness=0; mouthSmile=0.1; break;
+    case 'LISTENING': eyeOpenness=1.1; glowIntensity=0.7; speedMult=1.0; glitchChance=0.01; mouthOpenness=0.05; break;
+    case 'THINKING': eyeOpenness=1; glowIntensity=0.65; speedMult=2.0; glitchChance=0.03; mouthOpenness=0; break;
+    case 'SPEAKING': eyeOpenness=1; glowIntensity=0.8; speedMult=1.2; glitchChance=0.01; break;
+    case 'HAPPY': eyeOpenness=0.6; glowIntensity=0.85; speedMult=0.8; glitchChance=0.005; mouthSmile=0.7; mouthOpenness=0.05; break;
+    case 'SURPRISED': eyeOpenness=1.4; glowIntensity=1.0; speedMult=2.5; glitchChance=0.07; mouthOpenness=0.5; mouthSmile=0; break;
+  }
+  buildFace();
+});
+
+function ell(cx, cy, rx, ry, gray) {
+  fctx.beginPath();
+  fctx.ellipse(cx, cy, Math.max(1,rx), Math.max(1,ry), 0, 0, Math.PI*2);
+  const g = Math.floor(gray);
+  fctx.fillStyle = `rgb(${g},${g},${g})`;
+  fctx.fill();
+}
+
+function lin(x0, y0, x1, y1, w, gray) {
+  fctx.beginPath();
+  fctx.moveTo(x0, y0);
+  fctx.lineTo(x1, y1);
+  const g = Math.floor(gray);
+  fctx.strokeStyle = `rgb(${g},${g},${g})`;
+  fctx.lineWidth = Math.max(1, w);
+  fctx.lineCap = 'round';
+  fctx.stroke();
+}
+
+function buildFace() {
+  fctx.fillStyle = '#000';
+  fctx.fillRect(0, 0, PW, PH);
+
+  // Hair
+  ell(fcx, fcy - 24*sy, 42*sx, 32*sy, 0x30);
+  ell(fcx - 10*sx, fcy - 32*sy, 32*sx, 24*sy, 0x28);
+  ell(fcx + 6*sx, fcy - 28*sy, 34*sx, 22*sy, 0x26);
+
+  // Head
+  ell(fcx, fcy + 5*sy, 38*sx, 50*sy, 0x40);
+  ell(fcx, fcy + 2*sy, 34*sx, 44*sy, 0x50);
+  ell(fcx, fcy - 18*sy, 24*sx, 13*sy, 0x60);
+
+  // Temples
+  ell(fcx - 30*sx, fcy - 5*sy, 8*sx, 18*sy, 0x38);
+  ell(fcx + 30*sx, fcy - 5*sy, 8*sx, 18*sy, 0x38);
+
+  // Cheeks
+  ell(fcx - 20*sx, fcy + 10*sy, 14*sx, 12*sy, 0x48);
+  ell(fcx + 20*sx, fcy + 10*sy, 14*sx, 12*sy, 0x48);
+
+  // Eye sockets
+  const eyeH = Math.max(1, 6 * sy * eyeOpenness);
+  ell(fcx - 14*sx, fcy - 2*sy, 11*sx, eyeH, 0x1A);
+  ell(fcx + 14*sx, fcy - 2*sy, 11*sx, eyeH, 0x1A);
+
+  if (eyeOpenness > 0.15) {
+    const ebH = Math.max(1, 5 * sy * Math.min(1, eyeOpenness));
+    ell(fcx - 14*sx, fcy - 2*sy, 8*sx, ebH, 0x80);
+    ell(fcx + 14*sx, fcy - 2*sy, 8*sx, ebH, 0x80);
+    const pox = pupilX * 4 * sx;
+    const poy = pupilY * 3 * sy;
+    ell(fcx - 13*sx + pox, fcy - 2*sy + poy, 4*sx, 4*sy, 0xB0);
+    ell(fcx + 15*sx + pox, fcy - 2*sy + poy, 4*sx, 4*sy, 0xB0);
+    ell(fcx - 13*sx + pox, fcy - 2*sy + poy, 2.2*sx, 2.2*sy, 0xFF);
+    ell(fcx + 15*sx + pox, fcy - 2*sy + poy, 2.2*sx, 2.2*sy, 0xFF);
+    ell(fcx - 11.5*sx + pox, fcy - 4*sy + poy, 1.2*sx, 1.2*sy, 0xFF);
+    ell(fcx + 16.5*sx + pox, fcy - 4*sy + poy, 1.2*sx, 1.2*sy, 0xFF);
+  }
+
+  // Eyebrows
+  lin(fcx - 24*sx, fcy - 12*sy, fcx - 6*sx, fcy - 11*sy, 3*sx, 0x58);
+  lin(fcx + 6*sx, fcy - 11*sy, fcx + 24*sx, fcy - 12*sy, 3*sx, 0x58);
+
+  // Nose
+  lin(fcx, fcy + 1*sy, fcx - 1*sx, fcy + 13*sy, 2*sx, 0x4A);
+  ell(fcx, fcy + 15*sy, 6*sx, 4*sy, 0x52);
+  ell(fcx - 4*sx, fcy + 15.5*sy, 2.5*sx, 1.8*sy, 0x2A);
+  ell(fcx + 4*sx, fcy + 15.5*sy, 2.5*sx, 1.8*sy, 0x2A);
+
+  // Mouth
+  const mouthY = fcy + 24 * sy;
+  const mouthHW = 11 * sx;
+  const openOff = mouthOpenness * 5 * sy;
+  const smileOff = mouthSmile * 3 * sy;
+
+  fctx.beginPath();
+  for (let i = 0; i <= 12; i++) {
+    const t = i / 12;
+    const x = fcx - mouthHW + 2 * mouthHW * t;
+    const dn = (t - 0.5) * 2;
+    const curve = smileOff * dn * dn;
+    const y = mouthY + curve - openOff * 0.4;
+    if (i === 0) fctx.moveTo(x, y); else fctx.lineTo(x, y);
+  }
+  fctx.strokeStyle = 'rgb(112,112,112)';
+  fctx.lineWidth = Math.max(1, 2 * sx);
+  fctx.stroke();
+
+  if (mouthOpenness > 0.05) {
+    fctx.beginPath();
+    for (let i = 0; i <= 12; i++) {
+      const t = i / 12;
+      const x = fcx - mouthHW + 2 * mouthHW * t;
+      const dn = (t - 0.5) * 2;
+      const curve = smileOff * dn * dn;
+      const y = mouthY + curve + openOff * 0.6 + 3 * sy;
+      if (i === 0) fctx.moveTo(x, y); else fctx.lineTo(x, y);
+    }
+    fctx.strokeStyle = 'rgb(80,80,80)';
+    fctx.lineWidth = Math.max(1, 1.5 * sx);
+    fctx.stroke();
+    if (mouthOpenness > 0.08) ell(fcx, mouthY + 1.5*sy, mouthHW*0.6, Math.max(1, openOff*1.8), 0x28);
+  }
+
+  // Chin/jaw/neck/shoulders
+  ell(fcx, fcy + 36*sy, 16*sx, 10*sy, 0x44);
+  ell(fcx, fcy + 44*sy, 32*sx, 8*sy, 0x24);
+  fctx.fillStyle = 'rgb(46,46,46)';
+  fctx.fillRect(fcx - 15*sx, fcy + 46*sy, 30*sx, 28*sy);
+  ell(fcx, fcy + 46*sy, 17*sx, 4*sy, 0x22);
+  ell(fcx, fcy + 70*sy, 55*sx, 18*sy, 0x26);
+  ell(fcx, fcy + 78*sy, 65*sx, 14*sy, 0x20);
+  lin(fcx - 36*sx, fcy - 12*sy, fcx - 32*sx, fcy + 32*sy, sx, 0x4E);
+  lin(fcx + 36*sx, fcy - 12*sy, fcx + 32*sx, fcy + 32*sy, sx, 0x4E);
+
+  // Sample brightness
+  const faceData = fctx.getImageData(0, 0, PW, PH).data;
+  const candidates = [];
+  for (let y = 0; y < PH; y++) {
+    for (let x = 0; x < PW; x++) {
+      const v = faceData[(y * PW + x) * 4] / 255;
+      if (v > 0.04) candidates.push({x, y, w: v});
+    }
+  }
+  totalW = candidates.reduce((s, c) => s + c.w, 0);
+  cands = candidates;
+}
+
+let cands = [];
+let totalW = 0;
+buildFace();
+
+function weightedSample() {
+  let r = Math.random() * totalW;
+  for (const c of cands) {
+    r -= c.w;
+    if (r <= 0) return c;
+  }
+  return cands[cands.length - 1];
+}
+
+const NUM = 4500;
+const strokes = [];
+for (let i = 0; i < NUM; i++) {
+  const c = weightedSample();
+  strokes.push({
+    hx: c.x, hy: c.y,
+    x: c.x + (Math.random() - 0.5) * 2,
+    y: c.y + (Math.random() - 0.5) * 2,
+    speed: 0.15 + Math.random() * 0.5,
+    brightness: c.w * (0.6 + Math.random() * 0.4),
+    life: Math.floor(Math.random() * 150),
+    maxLife: 50 + Math.floor(Math.random() * 160),
+    phase: Math.random() * Math.PI * 2,
+  });
+}
+
+const dust = [];
+for (let i = 0; i < 80; i++) {
+  dust.push({
+    x: Math.random() * PW, y: Math.random() * PH,
+    speed: 0.04 + Math.random() * 0.10,
+    brightness: 0.015 + Math.random() * 0.04,
+    phase: Math.random() * Math.PI * 2,
+    life: Math.floor(Math.random() * 500),
+    maxLife: 250 + Math.floor(Math.random() * 500),
+  });
+}
+
+const fbuf = new Float32Array(PW * PH);
+let t = 0;
+
+function flowAngle(x, y, t) {
+  const s = 0.01;
+  const a1 = Math.sin(x * s + t * 0.35) + Math.cos(y * s * 1.2 + t * 0.25);
+  const a2 = Math.sin(x * s * 1.8 - t * 0.18) * 0.35;
+  const dx = x - fcx, dy = y - fcy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  const swirl = Math.atan2(dy, dx) + Math.PI * 0.5;
+  const sw = Math.max(0, 1 - dist / 165) * 0.8;
+  return a1 + a2 + swirl * sw;
+}
+
+function setPixel(x, y, val) {
+  const ix = Math.floor(x), iy = Math.floor(y);
+  if (ix >= 0 && ix < PW && iy >= 0 && iy < PH)
+    fbuf[iy * PW + ix] = Math.min(1, fbuf[iy * PW + ix] + val);
+}
+
+function respawn(s) {
+  const c = weightedSample();
+  s.hx = c.x; s.hy = c.y;
+  s.x = c.x + (Math.random() - 0.5) * 2;
+  s.y = c.y + (Math.random() - 0.5) * 2;
+  s.life = 0;
+  s.maxLife = 50 + Math.floor(Math.random() * 160);
+  s.brightness = c.w * (0.6 + Math.random() * 0.4);
+}
+
+// Speaking animation
+let speakingTime = 0;
+
+function frame() {
+  t += 0.016;
+  for (let i = 0; i < fbuf.length; i++) fbuf[i] *= 0.80;
+
+  const sm = 0.4 + speedMult * 0.6;
+
+  // Speaking mouth animation
+  if (states[stateIdx] === 'SPEAKING') {
+    speakingTime += 0.016;
+    mouthOpenness = 0.1 + 0.35 * Math.abs(Math.sin(speakingTime * 4.5 * Math.PI));
+    buildFace();
+  }
+
+  // Thinking pupil drift
+  if (states[stateIdx] === 'THINKING') {
+    pupilX = -0.3 + 0.2 * Math.sin(t * 0.8);
+    pupilY = -0.2 + 0.15 * Math.cos(t * 0.6);
+    buildFace();
+  }
+
+  for (const s of strokes) {
+    s.life++;
+    if (s.life > s.maxLife) respawn(s);
+
+    const a = flowAngle(s.x, s.y, t);
+    s.x += Math.cos(a) * s.speed * sm;
+    s.y += Math.sin(a) * s.speed * sm;
+    s.x += (s.hx - s.x) * 0.018;
+    s.y += (s.hy - s.y) * 0.018;
+
+    const lf = s.life / s.maxLife;
+    const fade = lf < 0.08 ? lf / 0.08 : lf > 0.85 ? Math.max(0, (1 - lf) / 0.15) : 1;
+    const fl = 0.5 + 0.5 * Math.sin(t * 2 + s.phase);
+    const br = s.brightness * fade * fl * glowIntensity;
+    setPixel(s.x, s.y, br);
+    // Stroke tail
+    setPixel(s.x + Math.cos(a), s.y + Math.sin(a), br * 0.45);
+  }
+
+  for (const d of dust) {
+    d.life++;
+    if (d.life > d.maxLife) { d.x = Math.random()*PW; d.y = Math.random()*PH; d.life = 0; }
+    const a = flowAngle(d.x, d.y, t * 0.3);
+    d.x += Math.cos(a) * d.speed; d.y += Math.sin(a) * d.speed;
+    if (d.x < 0) d.x += PW; if (d.x >= PW) d.x -= PW;
+    if (d.y < 0) d.y += PH; if (d.y >= PH) d.y -= PH;
+    setPixel(d.x, d.y, d.brightness * (0.4 + 0.6 * Math.sin(t + d.phase)));
+  }
+
+  // Glitch
+  if (Math.random() < glitchChance) {
+    const nRows = 1 + Math.floor(Math.random() * 6);
+    for (let r = 0; r < nRows; r++) {
+      const gy = Math.floor(Math.random() * PH);
+      const shift = Math.floor((Math.random() - 0.5) * 30);
+      if (shift !== 0) {
+        const row = fbuf.subarray(gy * PW, (gy + 1) * PW);
+        const copy = new Float32Array(row);
+        for (let x = 0; x < PW; x++) {
+          const sx = ((x - shift) % PW + PW) % PW;
+          row[x] = copy[sx];
+        }
+      }
+    }
+  }
+
+  const imgData = ctx.createImageData(PW, PH);
+  const data = imgData.data;
+  for (let i = 0; i < PW * PH; i++) {
+    const v = Math.min(255, Math.floor(fbuf[i] * 255));
+    data[i*4] = v; data[i*4+1] = v; data[i*4+2] = v; data[i*4+3] = 255;
+  }
+  ctx.putImageData(imgData, 0, 0);
+
+  // Status label
+  ctx.fillStyle = 'rgba(0,0,0,0.7)';
+  const label = `[ ${states[stateIdx]} ]`;
+  const lw = ctx.measureText(label).width;
+  ctx.fillRect((PW - lw) / 2 - 8, PH * 0.58 - 4, lw + 16, 20);
+  ctx.strokeStyle = '#006419';
+  ctx.strokeRect((PW - lw) / 2 - 8, PH * 0.58 - 4, lw + 16, 20);
+  ctx.fillStyle = '#00ff46';
+  ctx.font = '13px monospace';
+  ctx.fillText(label, (PW - lw) / 2, PH * 0.58 + 10);
+
+  requestAnimationFrame(frame);
+}
+
+frame();
+</script>
+</body>
+</html>
