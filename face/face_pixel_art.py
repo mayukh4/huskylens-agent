@@ -94,40 +94,40 @@ class PixelArtFaceRenderer:
         ms = 0.1 if params is None else params.mouth_smile
 
         # ── Hair / top of head ───────────────────────────────────────
-        self._ell(surf, fcx, fcy - 24 * sy, 42 * sx, 32 * sy, 0x30)
-        self._ell(surf, fcx - 10 * sx, fcy - 32 * sy, 32 * sx, 24 * sy, 0x28)
-        self._ell(surf, fcx + 6 * sx, fcy - 28 * sy, 34 * sx, 22 * sy, 0x26)
+        self._ell(surf, fcx, fcy - 24 * sy, 42 * sx, 32 * sy, 0x60)
+        self._ell(surf, fcx - 10 * sx, fcy - 32 * sy, 32 * sx, 24 * sy, 0x50)
+        self._ell(surf, fcx + 6 * sx, fcy - 28 * sy, 34 * sx, 22 * sy, 0x48)
 
         # ── Head shape ───────────────────────────────────────────────
-        self._ell(surf, fcx, fcy + 5 * sy, 38 * sx, 50 * sy, 0x40)
+        self._ell(surf, fcx, fcy + 5 * sy, 38 * sx, 50 * sy, 0x78)
 
         # Face inner (lighter)
-        self._ell(surf, fcx, fcy + 2 * sy, 34 * sx, 44 * sy, 0x50)
+        self._ell(surf, fcx, fcy + 2 * sy, 34 * sx, 44 * sy, 0x90)
 
         # Forehead highlight
-        self._ell(surf, fcx, fcy - 18 * sy, 24 * sx, 13 * sy, 0x60)
+        self._ell(surf, fcx, fcy - 18 * sy, 24 * sx, 13 * sy, 0xA8)
 
         # Temples
-        self._ell(surf, fcx - 30 * sx, fcy - 5 * sy, 8 * sx, 18 * sy, 0x38)
-        self._ell(surf, fcx + 30 * sx, fcy - 5 * sy, 8 * sx, 18 * sy, 0x38)
+        self._ell(surf, fcx - 30 * sx, fcy - 5 * sy, 8 * sx, 18 * sy, 0x60)
+        self._ell(surf, fcx + 30 * sx, fcy - 5 * sy, 8 * sx, 18 * sy, 0x60)
 
         # Cheeks
-        self._ell(surf, fcx - 20 * sx, fcy + 10 * sy, 14 * sx, 12 * sy, 0x48)
-        self._ell(surf, fcx + 20 * sx, fcy + 10 * sy, 14 * sx, 12 * sy, 0x48)
+        self._ell(surf, fcx - 20 * sx, fcy + 10 * sy, 14 * sx, 12 * sy, 0x80)
+        self._ell(surf, fcx + 20 * sx, fcy + 10 * sy, 14 * sx, 12 * sy, 0x80)
 
         # ── Eyes ─────────────────────────────────────────────────────
         eye_h = max(1.0, 6 * sy * eo)
 
         # Eye sockets (dark depressions)
-        self._ell(surf, fcx - 14 * sx, fcy - 2 * sy, 11 * sx, eye_h, 0x1A)
-        self._ell(surf, fcx + 14 * sx, fcy - 2 * sy, 11 * sx, eye_h, 0x1A)
+        self._ell(surf, fcx - 14 * sx, fcy - 2 * sy, 11 * sx, eye_h, 0x30)
+        self._ell(surf, fcx + 14 * sx, fcy - 2 * sy, 11 * sx, eye_h, 0x30)
 
         if eo > 0.15:
             eb_h = max(1.0, 5 * sy * min(1.0, eo))
 
             # Eyeballs (sclera)
-            self._ell(surf, fcx - 14 * sx, fcy - 2 * sy, 8 * sx, eb_h, 0x80)
-            self._ell(surf, fcx + 14 * sx, fcy - 2 * sy, 8 * sx, eb_h, 0x80)
+            self._ell(surf, fcx - 14 * sx, fcy - 2 * sy, 8 * sx, eb_h, 0xC0)
+            self._ell(surf, fcx + 14 * sx, fcy - 2 * sy, 8 * sx, eb_h, 0xC0)
 
             # Pupil offset
             pox = px * 4 * sx
@@ -135,9 +135,9 @@ class PixelArtFaceRenderer:
 
             # Iris
             self._ell(surf, fcx - 13 * sx + pox, fcy - 2 * sy + poy,
-                       4 * sx, 4 * sy, 0xB0)
+                       4 * sx, 4 * sy, 0xE0)
             self._ell(surf, fcx + 15 * sx + pox, fcy - 2 * sy + poy,
-                       4 * sx, 4 * sy, 0xB0)
+                       4 * sx, 4 * sy, 0xE0)
 
             # Pupils (brightest)
             self._ell(surf, fcx - 13 * sx + pox, fcy - 2 * sy + poy,
@@ -153,17 +153,17 @@ class PixelArtFaceRenderer:
 
         # Eyebrows
         self._lin(surf, fcx - 24 * sx, fcy - 12 * sy,
-                  fcx - 6 * sx, fcy - 11 * sy, 3 * sx, 0x58)
+                  fcx - 6 * sx, fcy - 11 * sy, 3 * sx, 0x90)
         self._lin(surf, fcx + 6 * sx, fcy - 11 * sy,
-                  fcx + 24 * sx, fcy - 12 * sy, 3 * sx, 0x58)
+                  fcx + 24 * sx, fcy - 12 * sy, 3 * sx, 0x90)
 
         # ── Nose ─────────────────────────────────────────────────────
         self._lin(surf, fcx, fcy + 1 * sy,
-                  fcx - 1 * sx, fcy + 13 * sy, 2 * sx, 0x4A)
-        self._ell(surf, fcx, fcy + 15 * sy, 6 * sx, 4 * sy, 0x52)
+                  fcx - 1 * sx, fcy + 13 * sy, 2 * sx, 0x80)
+        self._ell(surf, fcx, fcy + 15 * sy, 6 * sx, 4 * sy, 0x8A)
         # Nostrils
-        self._ell(surf, fcx - 4 * sx, fcy + 15.5 * sy, 2.5 * sx, 1.8 * sy, 0x2A)
-        self._ell(surf, fcx + 4 * sx, fcy + 15.5 * sy, 2.5 * sx, 1.8 * sy, 0x2A)
+        self._ell(surf, fcx - 4 * sx, fcy + 15.5 * sy, 2.5 * sx, 1.8 * sy, 0x48)
+        self._ell(surf, fcx + 4 * sx, fcy + 15.5 * sy, 2.5 * sx, 1.8 * sy, 0x48)
 
         # ── Mouth ────────────────────────────────────────────────────
         mouth_y = fcy + 24 * sy
@@ -183,35 +183,35 @@ class PixelArtFaceRenderer:
             pts_lower.append((int(x), int(mouth_y + curve + open_off * 0.6 + 3 * sy)))
 
         if len(pts_upper) > 1:
-            pygame.draw.lines(surf, (0x70, 0x70, 0x70), False,
+            pygame.draw.lines(surf, (0xB0, 0xB0, 0xB0), False,
                               pts_upper, max(1, int(2 * sx)))
         if mo > 0.05 and len(pts_lower) > 1:
-            pygame.draw.lines(surf, (0x50, 0x50, 0x50), False,
+            pygame.draw.lines(surf, (0x88, 0x88, 0x88), False,
                               pts_lower, max(1, int(1.5 * sx)))
             # Mouth interior
             if mo > 0.08:
                 self._ell(surf, fcx, mouth_y + 1.5 * sy,
-                          mouth_hw * 0.6, max(1, open_off * 1.8), 0x28)
+                          mouth_hw * 0.6, max(1, open_off * 1.8), 0x40)
 
         # ── Chin / jaw / neck ────────────────────────────────────────
-        self._ell(surf, fcx, fcy + 36 * sy, 16 * sx, 10 * sy, 0x44)
-        self._ell(surf, fcx, fcy + 44 * sy, 32 * sx, 8 * sy, 0x24)
+        self._ell(surf, fcx, fcy + 36 * sy, 16 * sx, 10 * sy, 0x78)
+        self._ell(surf, fcx, fcy + 44 * sy, 32 * sx, 8 * sy, 0x40)
 
         # Neck
-        pygame.draw.rect(surf, (0x2E, 0x2E, 0x2E),
+        pygame.draw.rect(surf, (0x50, 0x50, 0x50),
                          pygame.Rect(int(fcx - 15 * sx), int(fcy + 46 * sy),
                                      int(30 * sx), int(28 * sy)))
-        self._ell(surf, fcx, fcy + 46 * sy, 17 * sx, 4 * sy, 0x22)
+        self._ell(surf, fcx, fcy + 46 * sy, 17 * sx, 4 * sy, 0x38)
 
         # Shoulders
-        self._ell(surf, fcx, fcy + 70 * sy, 55 * sx, 18 * sy, 0x26)
-        self._ell(surf, fcx, fcy + 78 * sy, 65 * sx, 14 * sy, 0x20)
+        self._ell(surf, fcx, fcy + 70 * sy, 55 * sx, 18 * sy, 0x44)
+        self._ell(surf, fcx, fcy + 78 * sy, 65 * sx, 14 * sy, 0x38)
 
         # Face contour highlights
         self._lin(surf, fcx - 36 * sx, fcy - 12 * sy,
-                  fcx - 32 * sx, fcy + 32 * sy, max(1, sx), 0x4E)
+                  fcx - 32 * sx, fcy + 32 * sy, max(1, sx), 0x80)
         self._lin(surf, fcx + 36 * sx, fcy - 12 * sy,
-                  fcx + 32 * sx, fcy + 32 * sy, max(1, sx), 0x4E)
+                  fcx + 32 * sx, fcy + 32 * sy, max(1, sx), 0x80)
 
         # ── Extract brightness ───────────────────────────────────────
         arr = pygame.surfarray.array3d(surf)           # (w, h, 3)
@@ -324,7 +324,7 @@ class PixelArtFaceRenderer:
         face_surface = surface.subsurface((0, 0, FACE_W, SCREEN_H))
 
         # ── Trail decay ──────────────────────────────────────────────
-        self.fbuf *= 0.80
+        self.fbuf *= 0.84
 
         # ── Update main particles ────────────────────────────────────
         speed_mult = 0.4 + params.rain_speed * 0.6
@@ -353,7 +353,7 @@ class PixelArtFaceRenderer:
         flicker = 0.5 + 0.5 * np.sin(t * 2.0 + self.p_phase)
 
         # Final brightness per particle, modulated by face state
-        glow = max(0.15, params.glow_intensity)
+        glow = max(0.3, params.glow_intensity * 1.6)
         br = self.p_brightness * fade * flicker * glow
 
         # Write particles to frame buffer

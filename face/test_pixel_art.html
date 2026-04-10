@@ -87,36 +87,36 @@ function buildFace() {
   fctx.fillRect(0, 0, PW, PH);
 
   // Hair
-  ell(fcx, fcy - 24*sy, 42*sx, 32*sy, 0x30);
-  ell(fcx - 10*sx, fcy - 32*sy, 32*sx, 24*sy, 0x28);
-  ell(fcx + 6*sx, fcy - 28*sy, 34*sx, 22*sy, 0x26);
+  ell(fcx, fcy - 24*sy, 42*sx, 32*sy, 0x60);
+  ell(fcx - 10*sx, fcy - 32*sy, 32*sx, 24*sy, 0x50);
+  ell(fcx + 6*sx, fcy - 28*sy, 34*sx, 22*sy, 0x48);
 
   // Head
-  ell(fcx, fcy + 5*sy, 38*sx, 50*sy, 0x40);
-  ell(fcx, fcy + 2*sy, 34*sx, 44*sy, 0x50);
-  ell(fcx, fcy - 18*sy, 24*sx, 13*sy, 0x60);
+  ell(fcx, fcy + 5*sy, 38*sx, 50*sy, 0x78);
+  ell(fcx, fcy + 2*sy, 34*sx, 44*sy, 0x90);
+  ell(fcx, fcy - 18*sy, 24*sx, 13*sy, 0xA8);
 
   // Temples
-  ell(fcx - 30*sx, fcy - 5*sy, 8*sx, 18*sy, 0x38);
-  ell(fcx + 30*sx, fcy - 5*sy, 8*sx, 18*sy, 0x38);
+  ell(fcx - 30*sx, fcy - 5*sy, 8*sx, 18*sy, 0x60);
+  ell(fcx + 30*sx, fcy - 5*sy, 8*sx, 18*sy, 0x60);
 
   // Cheeks
-  ell(fcx - 20*sx, fcy + 10*sy, 14*sx, 12*sy, 0x48);
-  ell(fcx + 20*sx, fcy + 10*sy, 14*sx, 12*sy, 0x48);
+  ell(fcx - 20*sx, fcy + 10*sy, 14*sx, 12*sy, 0x80);
+  ell(fcx + 20*sx, fcy + 10*sy, 14*sx, 12*sy, 0x80);
 
   // Eye sockets
   const eyeH = Math.max(1, 6 * sy * eyeOpenness);
-  ell(fcx - 14*sx, fcy - 2*sy, 11*sx, eyeH, 0x1A);
-  ell(fcx + 14*sx, fcy - 2*sy, 11*sx, eyeH, 0x1A);
+  ell(fcx - 14*sx, fcy - 2*sy, 11*sx, eyeH, 0x30);
+  ell(fcx + 14*sx, fcy - 2*sy, 11*sx, eyeH, 0x30);
 
   if (eyeOpenness > 0.15) {
     const ebH = Math.max(1, 5 * sy * Math.min(1, eyeOpenness));
-    ell(fcx - 14*sx, fcy - 2*sy, 8*sx, ebH, 0x80);
-    ell(fcx + 14*sx, fcy - 2*sy, 8*sx, ebH, 0x80);
+    ell(fcx - 14*sx, fcy - 2*sy, 8*sx, ebH, 0xC0);
+    ell(fcx + 14*sx, fcy - 2*sy, 8*sx, ebH, 0xC0);
     const pox = pupilX * 4 * sx;
     const poy = pupilY * 3 * sy;
-    ell(fcx - 13*sx + pox, fcy - 2*sy + poy, 4*sx, 4*sy, 0xB0);
-    ell(fcx + 15*sx + pox, fcy - 2*sy + poy, 4*sx, 4*sy, 0xB0);
+    ell(fcx - 13*sx + pox, fcy - 2*sy + poy, 4*sx, 4*sy, 0xE0);
+    ell(fcx + 15*sx + pox, fcy - 2*sy + poy, 4*sx, 4*sy, 0xE0);
     ell(fcx - 13*sx + pox, fcy - 2*sy + poy, 2.2*sx, 2.2*sy, 0xFF);
     ell(fcx + 15*sx + pox, fcy - 2*sy + poy, 2.2*sx, 2.2*sy, 0xFF);
     ell(fcx - 11.5*sx + pox, fcy - 4*sy + poy, 1.2*sx, 1.2*sy, 0xFF);
@@ -124,14 +124,14 @@ function buildFace() {
   }
 
   // Eyebrows
-  lin(fcx - 24*sx, fcy - 12*sy, fcx - 6*sx, fcy - 11*sy, 3*sx, 0x58);
-  lin(fcx + 6*sx, fcy - 11*sy, fcx + 24*sx, fcy - 12*sy, 3*sx, 0x58);
+  lin(fcx - 24*sx, fcy - 12*sy, fcx - 6*sx, fcy - 11*sy, 3*sx, 0x90);
+  lin(fcx + 6*sx, fcy - 11*sy, fcx + 24*sx, fcy - 12*sy, 3*sx, 0x90);
 
   // Nose
-  lin(fcx, fcy + 1*sy, fcx - 1*sx, fcy + 13*sy, 2*sx, 0x4A);
-  ell(fcx, fcy + 15*sy, 6*sx, 4*sy, 0x52);
-  ell(fcx - 4*sx, fcy + 15.5*sy, 2.5*sx, 1.8*sy, 0x2A);
-  ell(fcx + 4*sx, fcy + 15.5*sy, 2.5*sx, 1.8*sy, 0x2A);
+  lin(fcx, fcy + 1*sy, fcx - 1*sx, fcy + 13*sy, 2*sx, 0x80);
+  ell(fcx, fcy + 15*sy, 6*sx, 4*sy, 0x8A);
+  ell(fcx - 4*sx, fcy + 15.5*sy, 2.5*sx, 1.8*sy, 0x48);
+  ell(fcx + 4*sx, fcy + 15.5*sy, 2.5*sx, 1.8*sy, 0x48);
 
   // Mouth
   const mouthY = fcy + 24 * sy;
@@ -148,7 +148,7 @@ function buildFace() {
     const y = mouthY + curve - openOff * 0.4;
     if (i === 0) fctx.moveTo(x, y); else fctx.lineTo(x, y);
   }
-  fctx.strokeStyle = 'rgb(112,112,112)';
+  fctx.strokeStyle = 'rgb(176,176,176)';
   fctx.lineWidth = Math.max(1, 2 * sx);
   fctx.stroke();
 
@@ -162,22 +162,22 @@ function buildFace() {
       const y = mouthY + curve + openOff * 0.6 + 3 * sy;
       if (i === 0) fctx.moveTo(x, y); else fctx.lineTo(x, y);
     }
-    fctx.strokeStyle = 'rgb(80,80,80)';
+    fctx.strokeStyle = 'rgb(136,136,136)';
     fctx.lineWidth = Math.max(1, 1.5 * sx);
     fctx.stroke();
-    if (mouthOpenness > 0.08) ell(fcx, mouthY + 1.5*sy, mouthHW*0.6, Math.max(1, openOff*1.8), 0x28);
+    if (mouthOpenness > 0.08) ell(fcx, mouthY + 1.5*sy, mouthHW*0.6, Math.max(1, openOff*1.8), 0x40);
   }
 
   // Chin/jaw/neck/shoulders
-  ell(fcx, fcy + 36*sy, 16*sx, 10*sy, 0x44);
-  ell(fcx, fcy + 44*sy, 32*sx, 8*sy, 0x24);
-  fctx.fillStyle = 'rgb(46,46,46)';
+  ell(fcx, fcy + 36*sy, 16*sx, 10*sy, 0x78);
+  ell(fcx, fcy + 44*sy, 32*sx, 8*sy, 0x40);
+  fctx.fillStyle = 'rgb(80,80,80)';
   fctx.fillRect(fcx - 15*sx, fcy + 46*sy, 30*sx, 28*sy);
-  ell(fcx, fcy + 46*sy, 17*sx, 4*sy, 0x22);
-  ell(fcx, fcy + 70*sy, 55*sx, 18*sy, 0x26);
-  ell(fcx, fcy + 78*sy, 65*sx, 14*sy, 0x20);
-  lin(fcx - 36*sx, fcy - 12*sy, fcx - 32*sx, fcy + 32*sy, sx, 0x4E);
-  lin(fcx + 36*sx, fcy - 12*sy, fcx + 32*sx, fcy + 32*sy, sx, 0x4E);
+  ell(fcx, fcy + 46*sy, 17*sx, 4*sy, 0x38);
+  ell(fcx, fcy + 70*sy, 55*sx, 18*sy, 0x44);
+  ell(fcx, fcy + 78*sy, 65*sx, 14*sy, 0x38);
+  lin(fcx - 36*sx, fcy - 12*sy, fcx - 32*sx, fcy + 32*sy, sx, 0x80);
+  lin(fcx + 36*sx, fcy - 12*sy, fcx + 32*sx, fcy + 32*sy, sx, 0x80);
 
   // Sample brightness
   const faceData = fctx.getImageData(0, 0, PW, PH).data;
@@ -268,7 +268,7 @@ let speakingTime = 0;
 
 function frame() {
   t += 0.016;
-  for (let i = 0; i < fbuf.length; i++) fbuf[i] *= 0.80;
+  for (let i = 0; i < fbuf.length; i++) fbuf[i] *= 0.84;
 
   const sm = 0.4 + speedMult * 0.6;
 
@@ -299,7 +299,7 @@ function frame() {
     const lf = s.life / s.maxLife;
     const fade = lf < 0.08 ? lf / 0.08 : lf > 0.85 ? Math.max(0, (1 - lf) / 0.15) : 1;
     const fl = 0.5 + 0.5 * Math.sin(t * 2 + s.phase);
-    const br = s.brightness * fade * fl * glowIntensity;
+    const br = s.brightness * fade * fl * Math.max(0.3, glowIntensity * 1.6);
     setPixel(s.x, s.y, br);
     // Stroke tail
     setPixel(s.x + Math.cos(a), s.y + Math.sin(a), br * 0.45);
