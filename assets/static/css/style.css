@@ -1,0 +1,184 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body {
+  width: 800px;
+  height: 480px;
+  background: #000;
+  overflow: hidden;
+  cursor: none;
+  font-family: "Courier New", "Courier", monospace;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#container {
+  display: flex;
+  flex-direction: row;
+  width: 800px;
+  height: 480px;
+  position: relative;
+}
+
+/* ── Face Area (left 60%) ─────────────────────────── */
+
+#face-area {
+  width: 480px;
+  min-width: 480px;
+  height: 480px;
+  position: relative;
+  background: #000204;
+  flex-shrink: 0;
+  overflow: hidden;
+}
+
+#face-canvas {
+  width: 480px;
+  height: 480px;
+  display: block;
+  position: relative;
+  z-index: 1;
+}
+
+#status-label {
+  position: absolute;
+  bottom: 10px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 13px;
+  font-weight: bold;
+  color: rgb(0, 140, 180);
+  text-shadow: 0 0 8px rgba(0, 180, 220, 0.5);
+  letter-spacing: 2px;
+  pointer-events: none;
+}
+
+/* ── Panel (right 40%) ────────────────────────────── */
+
+#panel {
+  width: 320px;
+  min-width: 320px;
+  height: 480px;
+  background: rgb(2, 8, 2);
+  border-left: 2px solid rgb(0, 120, 30);
+  display: flex;
+  flex-direction: column;
+  padding: 8px 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+#clock {
+  font-size: 30px;
+  font-weight: bold;
+  color: rgb(0, 255, 65);
+  text-align: center;
+  text-shadow: 0 0 6px rgba(0, 255, 65, 0.3);
+  line-height: 1.1;
+}
+
+#date {
+  font-size: 12px;
+  color: rgb(0, 100, 25);
+  text-align: center;
+  margin-bottom: 4px;
+}
+
+#weather-info {
+  text-align: center;
+  font-size: 12px;
+  color: rgb(0, 180, 40);
+}
+
+#weather-location {
+  text-align: center;
+  font-size: 11px;
+  color: rgb(0, 50, 15);
+  margin-bottom: 2px;
+}
+
+.divider {
+  border: none;
+  border-top: 1px solid rgb(0, 120, 30);
+  margin: 4px 0;
+  flex-shrink: 0;
+}
+
+#comms-header {
+  font-size: 13px;
+  font-weight: bold;
+  color: rgb(0, 255, 65);
+  padding: 2px 0;
+  flex-shrink: 0;
+}
+
+#log-container {
+  flex: 1;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-size: 11px;
+  line-height: 1.3;
+  min-height: 0;
+}
+
+/* Hide scrollbar but allow scrolling */
+#log-container::-webkit-scrollbar {
+  width: 0;
+}
+
+.log-line {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 296px;
+  flex-shrink: 0;
+}
+
+.log-bright { color: rgb(0, 255, 65); }
+.log-green  { color: rgb(0, 180, 40); }
+.log-dim    { color: rgb(0, 100, 25); }
+.log-red    { color: rgb(180, 40, 40); }
+
+.bottom-div {
+  margin-top: auto;
+  flex-shrink: 0;
+}
+
+#hint {
+  font-size: 12px;
+  color: rgb(0, 100, 25);
+  text-align: center;
+  padding: 4px 0 2px;
+  flex-shrink: 0;
+}
+
+#hint.recording {
+  color: rgb(180, 40, 40);
+}
+
+#hint.processing {
+  color: rgb(0, 100, 25);
+}
+
+/* ── Exit Button ──────────────────────────────────── */
+
+#exit-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.7);
+  border: 1px solid rgb(0, 100, 25);
+  color: rgb(180, 40, 40);
+  font-size: 14px;
+  cursor: pointer;
+  z-index: 100;
+}

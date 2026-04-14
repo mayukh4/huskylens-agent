@@ -1,13 +1,30 @@
-build/
-dist/
-.DS_Store
-*.egg-info/
-.env
-*.log
-*.mp3
-*.pyc
+# Python
 __pycache__/
+*.pyc
 *.pyo
+*.egg-info/
 .venv/
 venv/
+build/
+dist/
+
+# Secrets & local config
+.env
+
+# Audio/media artifacts
+*.log
+*.mp3
 *.wav
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor / AI-assistant scratch
+.claude/
+CLAUDE.md
+.cursor/
+.cursorrules
+.aider*
+.plan
+plan.md

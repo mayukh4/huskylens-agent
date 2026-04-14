@@ -1,25 +1,33 @@
-import os
-"""Home Assistant REST API controller for gesture-triggered smart home actions."""
+"""Home Assistant REST API controller for gesture-triggered smart home actions.
 
+Optional: if HA_URL or HA_TOKEN is unset, the controller is disabled and all
+calls are no-ops. This lets tars-vision run without a Home Assistant instance.
+"""
+
+import os
 import logging
 import requests
 
 logger = logging.getLogger(__name__)
 
-HA_URL = "http://192.168.40.23:8123"
+HA_URL = os.environ.get("HA_URL", "")
 HA_TOKEN = os.environ.get("HA_TOKEN", "")
 
 
 class HAController:
     def __init__(self, base_url=HA_URL, token=HA_TOKEN):
-        self.base_url = base_url.rstrip("/")
+        self.enabled = bool(base_url and token)
+        self.base_url = base_url.rstrip("/") if base_url else ""
         self.headers = {
             "Authorization": f"Bearer {token}",
             "Content-Type": "application/json",
-        }
+        } if self.enabled else {}
 
     def toggle(self, entity_id: str) -> bool:
-        """Toggle a switch entity. Returns True on success."""
+        """Toggle a switch entity. Returns True on success. No-op when disabled."""
+        if not self.enabled:
+            logger.info(f"HA not configured — skipping toggle of {entity_id}")
+            return False
         try:
             resp = requests.post(
                 f"{self.base_url}/api/services/switch/toggle",
@@ -33,7 +41,9 @@ class HAController:
             return False
 
     def get_state(self, entity_id: str) -> str:
-        """Get the current state of an entity."""
+        """Get the current state of an entity. Returns 'unknown' when disabled."""
+        if not self.enabled:
+            return "unknown"
         try:
             resp = requests.get(
                 f"{self.base_url}/api/states/{entity_id}",

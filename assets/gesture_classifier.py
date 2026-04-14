@@ -28,7 +28,7 @@ def _valid(pt):
     return pt[0] != 0 or pt[1] != 0
 
 
-def _is_extended(hand_data, finger_name, wrist, threshold=1.05):
+def _is_extended(hand_data, finger_name, wrist, threshold=1.15):
     """Check if a finger is extended (tip farther from wrist than MCP)."""
     tip = _point(hand_data, f"{finger_name}_tip")
     mcp = _point(hand_data, f"{finger_name}_mcp")
@@ -44,12 +44,12 @@ def _is_extended(hand_data, finger_name, wrist, threshold=1.05):
 def classify_gesture(hand_data: dict) -> str:
     """Classify a hand gesture from 21 keypoints.
 
-    Returns: "open_palm", "fist", "victory", or "unknown".
+    Returns: "open_palm", "fist", "thumbs_up", or "unknown".
 
     Algorithm: Check which fingers are extended relative to the wrist.
-    - Open palm: 3-4 fingers extended
-    - Fist: 0-1 fingers extended
-    - Victory: index + middle extended, ring + pinky folded
+    - Thumbs up: only thumb extended, thumb tip visibly above the wrist
+    - Open palm: 3-4 non-thumb fingers extended
+    - Fist: 0-1 non-thumb fingers extended
     """
     wrist = _point(hand_data, "wrist")
     if not _valid(wrist):
@@ -70,14 +70,25 @@ def classify_gesture(hand_data: dict) -> str:
 
     extended = sum(1 for v in states.values() if v)
 
-    # Victory: index + middle up, ring + pinky down
-    index_up = states.get("index_finger", False)
-    middle_up = states.get("middle_finger", False)
-    ring_down = not states.get("ring_finger", True)
-    pinky_down = not states.get("pinky_finger", True)
-
-    if index_up and middle_up and ring_down and pinky_down:
-        return "victory"
+    # Thumbs-up: thumb extended + ALL four non-thumb fingers explicitly folded +
+    # thumb tip is the highest point of the hand (above every fingertip) AND
+    # meaningfully above the wrist. Strict enough to reject a tilted closed fist,
+    # where the thumb tip typically sits level with or below the folded knuckles.
+    thumb_ext = _is_extended(hand_data, "thumb", wrist)
+    others_folded = all(n in states and states[n] is False for n in finger_names)
+    if thumb_ext and others_folded:
+        thumb_tip = _point(hand_data, "thumb_tip")
+        middle_mcp = _point(hand_data, "middle_finger_mcp")
+        tips = [_point(hand_data, f"{n}_tip") for n in finger_names]
+        if _valid(thumb_tip) and _valid(middle_mcp) and all(_valid(t) for t in tips):
+            hand_scale = abs(wrist[1] - middle_mcp[1])
+            min_finger_tip_y = min(t[1] for t in tips)
+            if (
+                hand_scale > 0
+                and thumb_tip[1] < wrist[1] - 0.35 * hand_scale
+                and thumb_tip[1] < min_finger_tip_y - 0.15 * hand_scale
+            ):
+                return "thumbs_up"
 
     if extended >= 3:
         return "open_palm"

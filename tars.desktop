@@ -1,9 +1,0 @@
-[Desktop Entry]
-Name=TARS
-Comment=TARS AI Vision Agent — HuskyLens + Hermes
-Exec=bash -c 'cd /home/jansky/huskylens-agent && /usr/bin/python3 /home/jansky/huskylens-agent/face/face_server.py'
-Icon=utilities-terminal
-Terminal=false
-Type=Application
-Categories=Utility;
-StartupNotify=false

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=800,height=480,initial-scale=1.0,user-scalable=no">
+  <title>TARS</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <div id="container">
+    <div id="face-area">
+      <canvas id="face-canvas"></canvas>
+      <div id="status-label">INITIALIZING</div>
+    </div>
+    <div id="panel">
+      <div id="clock">00:00</div>
+      <div id="date">---</div>
+      <div id="weather-info">
+        <span id="weather-temp">--</span>
+        <span id="weather-desc"></span>
+      </div>
+      <div id="weather-location"></div>
+      <hr class="divider">
+      <div id="comms-header">TARS // COMMS LOG</div>
+      <hr class="divider">
+      <div id="log-container"></div>
+      <hr class="divider bottom-div">
+      <div id="hint">TAP SCREEN TO SPEAK</div>
+    </div>
+    <div id="exit-btn">✕</div>
+  </div>
+
+  <script src="js/three.min.js"></script>
+  <script src="js/face-animator.js"></script>
+  <script src="js/face-renderer.js"></script>
+  <script src="js/panel.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

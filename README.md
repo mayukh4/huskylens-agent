@@ -1,16 +1,17 @@
-# TARS — HuskyLens V2 AI Face Display
+# tars-vision — HuskyLens V2 AI Face Display
 
-A matrix-style AI face display for Raspberry Pi 5 that gives [Hermes Agent](https://github.com/NousResearch/hermes-agent) a physical presence — eyes (HuskyLens V2 camera), a voice (OpenAI TTS/STT), and a face (DSI touchscreen). TARS personality from Interstellar. Humor setting at 75%.
+A matrix-style AI face for Raspberry Pi 5 that gives [Hermes Agent](https://github.com/NousResearch/hermes-agent) a physical presence — eyes (HuskyLens V2 camera over I2C), a voice (OpenAI Whisper + TTS), and a face (Three.js holographic render on a DSI touchscreen). TARS personality from *Interstellar*. Humour setting at 75%.
+
+Packaged as a [Hermes skill](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills/) — drop it in `~/.hermes/skills/hardware/tars-vision/` and Hermes discovers it on startup.
 
 Built for [@MayukhBuilds](https://www.youtube.com/@MayukhBuilds).
 
-## What It Does
+## What it does
 
-- **Matrix face** on 800x480 DSI touchscreen — ASCII silhouette with animated eyes/mouth, scanlines, glitch effects, matrix rain
-- **Tap-to-speak**: Touch screen -> Record -> Whisper STT -> Hermes Agent -> OpenAI TTS -> Speaker
-- **Gesture control**: Open palm toggles fan, fist toggles room LED, victory sign gets astronomy news — all via HuskyLens hand recognition + Home Assistant
-- **Heartbeat**: Every 5 min, TARS checks who is around (face recognition) and their mood (emotion recognition), then comments in character
-- **TARS personality**: Dry wit, deadpan humor, slightly existential. Powered by Hermes Agent with custom SOUL.md
+- **Holographic face** on an 800x480 DSI touchscreen — animated eyes and mouth rendered with Three.js in Chromium kiosk mode.
+- **Tap-to-speak**: touch screen → record → Whisper STT → Hermes Agent → OpenAI TTS → speaker.
+- **Always-on gesture control**: open palm toggles a fan, fist toggles a room LED, victory sign asks Hermes for astronomy news. All via HuskyLens hand recognition and Home Assistant. Home Assistant is optional — if unconfigured, palm and fist silently no-op; victory sign still works.
+- **Heartbeat**: every 5 min, TARS briefly runs face recognition then emotion recognition, tells Hermes who is around and how they seem, and speaks a response in character.
 
 ## Architecture
 
@@ -30,6 +31,8 @@ HuskyLens V2 --(I2C)--> Raspberry Pi 5
                             +--> OpenAI TTS (Onyx) --> Speaker
 ```
 
+Deep-dive: [references/ARCHITECTURE.md](references/ARCHITECTURE.md).
+
 ## Hardware
 
 | Component | Details |
@@ -37,96 +40,86 @@ HuskyLens V2 --(I2C)--> Raspberry Pi 5
 | Computer | Raspberry Pi 5 (4GB+) |
 | Camera | HuskyLens V2 (SEN0638) via I2C |
 | Display | DSI touchscreen (800x480) |
-| Microphone | USB mic (C-Media PCM2902) |
-| Speaker | USB speaker (Jieli UACDemo) |
-| Power | Separate 5V/2A+ USB-C brick for HuskyLens |
+| Microphone | USB mic (e.g. C-Media PCM2902) |
+| Speaker | USB speaker (e.g. Jieli UACDemo) |
+| Power for HuskyLens | Separate 5V/2A+ USB-C brick (**do not** power from the Pi) |
 
-## Wiring (I2C via Gravity 4-pin cable)
+Full wiring table, I2C firmware setup, and PipeWire audio setup: [references/SETUP.md](references/SETUP.md).
 
-| Gravity Wire | Signal | Pi Pin |
-|-------------|--------|--------|
-| Green | SDA | Pin 3 (GPIO 2) |
-| Blue | SCL | Pin 5 (GPIO 3) |
-| Black | GND | Any GND pin |
-| Red | VCC | Pin 1 (3.3V) |
-
-HuskyLens Protocol Type must be set to **I2C** or **Auto Detect** in device settings.
-
-> **Note**: UART does not work on Pi 5 due to a known kernel regression (6.6.51+). USB MCP was abandoned due to firmware crashes after 15-20 min of continuous polling. I2C is the stable solution.
-
-## Gesture Map
-
-| Gesture | Action |
-|---------|--------|
-| Open palm (5 fingers) | Toggle fan (Home Assistant) |
-| Fist | Toggle room LED (Home Assistant) |
-| Victory sign (2 fingers) | Astronomy/astrophysics briefing from Hermes |
-
-## Prerequisites
-
-- Hermes Agent installed and configured
-- HuskyLens V2 (firmware v1.2.2+) set to I2C mode
-- OpenAI API key (for Whisper STT and TTS)
-- Home Assistant instance (for gesture smart home control)
-- PipeWire audio server (default on Raspberry Pi OS)
-
-## Quick Start
+## Quick start
 
 ```bash
-# 1. Install dependencies
-pip install pygame flask sounddevice numpy requests pyserial smbus2
+git clone https://github.com/MayukhBuilds/huskylens-agent.git
+cd huskylens-agent
 
-# 2. Copy SOUL personality to Hermes
-cp soul/SOUL.md ~/.hermes/SOUL.md
+# Install Python deps, copy SOUL.md to ~/.hermes/, create .env from template
+bash scripts/install.sh
 
-# 3. Wire HuskyLens via I2C (see wiring table above)
-# 4. Power HuskyLens with separate USB-C brick
-# 5. Set HuskyLens to I2C mode in device settings
+# Put your OpenAI key in .env (and HA_URL/HA_TOKEN/TARS_LOCATION if you want them)
+$EDITOR .env
 
-# 6. Run
-./scripts/start_all.sh
+# Wire HuskyLens via I2C, power it from the separate USB-C brick, set its
+# Protocol Type to "I2C" in device settings.
+
+# Run
+bash scripts/start.sh
 ```
 
-## Key Files
+To register as a Hermes skill so it auto-loads:
 
-| File | Purpose |
-|------|---------|
-| face/face_server.py | Main app: pygame + Flask API + voice pipeline + heartbeat |
-| face/face_renderer.py | Matrix face with ASCII silhouette, eyes, mouth |
-| face/face_animations.py | State machine (idle, thinking, speaking, happy, etc.) |
-| face/huskylens_uart.py | I2C/UART binary protocol driver (standalone, no pinpong) |
-| face/vision_router.py | Gesture detection loop with adaptive polling |
-| face/gesture_classifier.py | Classify palm/fist/victory from 21 hand keypoints |
-| face/ha_controller.py | Home Assistant REST API wrapper |
-| soul/SOUL.md | TARS personality definition |
+```bash
+mkdir -p ~/.hermes/skills/hardware
+ln -s "$(pwd)" ~/.hermes/skills/hardware/tars-vision
+```
+
+## Configuration
+
+All configuration is via `.env` (template in `.env.example`):
+
+| Variable | Required | Purpose |
+|---|---|---|
+| `OPENAI_API_KEY` | yes | Whisper STT and TTS |
+| `TARS_LOCATION` | no | City for the weather widget (e.g. `"Kingston, Ontario"`). Empty disables it. |
+| `HA_URL` | no | Home Assistant base URL (e.g. `http://homeassistant.local:8123`). Empty disables HA gestures. |
+| `HA_TOKEN` | no | Home Assistant long-lived access token |
+
+Smart-home entity IDs are hardcoded in [assets/vision_router.py](assets/vision_router.py) (`switch.fan_socket_1`, `switch.room_led_socket_1`). Edit `GESTURE_ACTIONS` at the top of that file to match your HA setup.
+
+## Gestures
+
+| Gesture | Action | Requires |
+|---------|--------|----------|
+| Open palm | Toggle fan switch | Home Assistant |
+| Fist | Toggle room LED switch | Home Assistant |
+| Victory sign | Astronomy/astrophysics news briefing | Hermes Agent |
 
 ## Face API
 
-Control TARS face state from anywhere:
+Hermes (or anything else) can drive the face by POSTing to `localhost:5555`:
 
 ```bash
-# Set face state
-curl -X POST localhost:5555/state -d '{"state":"happy"}'
-
-# Temporary expression (3 seconds)
+curl -X POST localhost:5555/state      -d '{"state":"happy"}'
 curl -X POST localhost:5555/expression -d '{"expression":"surprised","duration":3}'
-
-# Health check
-curl http://localhost:5555/health
+curl       localhost:5555/health
 ```
 
-States: idle, listening, recording, thinking, speaking, happy, curious, surprised, sleeping
+States: `idle`, `listening`, `recording`, `thinking`, `speaking`, `happy`, `curious`, `surprised`, `sleeping`.
 
-## How the Heartbeat Works
+## Key files
 
-Every 5 minutes, TARS:
-1. Pauses gesture detection
-2. Enters multi-algorithm mode (Face Recognition + Emotion Recognition)
-3. Identifies who is there and their mood
-4. Switches back to Hand Recognition
-5. Passes context to Hermes: "Mayukh is here. They seem happy."
-6. Hermes responds in character, TARS speaks it aloud
+| File | Purpose |
+|------|---------|
+| [SKILL.md](SKILL.md) | Hermes skill manifest |
+| [assets/face_server.py](assets/face_server.py) | Main process: Flask API + voice pipeline + heartbeat |
+| [assets/vision_router.py](assets/vision_router.py) | Always-on gesture polling loop |
+| [assets/huskylens_uart.py](assets/huskylens_uart.py) | Standalone I2C binary-protocol driver |
+| [assets/gesture_classifier.py](assets/gesture_classifier.py) | Classify palm/fist/victory from 21 hand keypoints |
+| [assets/ha_controller.py](assets/ha_controller.py) | Home Assistant REST wrapper (optional) |
+| [assets/static/](assets/static/) | Three.js holographic face frontend |
+| [references/SOUL.md](references/SOUL.md) | TARS personality prompt |
+| [references/SETUP.md](references/SETUP.md) | Hardware + firmware setup guide |
+| [references/ARCHITECTURE.md](references/ARCHITECTURE.md) | Threading model and design rationale |
 
 ## License
 
-MIT
+MIT — see [LICENSE](LICENSE).

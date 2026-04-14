@@ -1,7 +1,7 @@
 """
 Vision Router — Always-on hand gesture detection via HuskyLens V2 I2C.
 
-Polls HuskyLens over I2C binary protocol, classifies open_palm / fist / victory,
+Polls HuskyLens over I2C binary protocol, classifies open_palm / fist / thumbs_up,
 triggers Home Assistant actions or Hermes queries with stability-based debounce.
 """
 
@@ -30,14 +30,16 @@ GESTURE_ACTIONS = {
         "label": "Room LED toggled",
         "expression": "curious",
     },
-    "victory": {
+    "thumbs_up": {
         "type": "hermes",
         "prompt": (
-            "Give me one fascinating latest development or discovery in "
-            "astronomy, astrophysics, or cosmology. Something from the last "
-            "few weeks if possible. One concise paragraph, make it exciting."
+            "Use your web search tool to fetch the latest astronomy, "
+            "astrophysics, or cosmology news from the last couple of weeks. "
+            "Respond with 2 to 3 short bullet headlines of the most exciting "
+            "recent developments. One short sentence per bullet, high-level "
+            "only. Start each bullet with a dash."
         ),
-        "label": "Astronomy briefing",
+        "label": "Astronomy headlines",
         "expression": "curious",
     },
 }
@@ -129,6 +131,8 @@ class VisionRouter:
         self._thread = threading.Thread(target=self._poll_loop, daemon=True)
         self._thread.start()
         self._log("[vision] Gesture control online (I2C)", "green")
+        if not self.ha.enabled:
+            self._log("[vision] Home Assistant not configured — palm/fist gestures are no-ops", "dim")
 
     def _poll_loop(self):
         """Main polling loop — runs in its own thread."""
@@ -307,9 +311,13 @@ class VisionRouter:
             # Run Hermes query in a separate thread to not block polling
             def _run_hermes():
                 import textwrap, re
+                start_ts = time.time()
                 try:
                     self.app_state.set_face("thinking")
+                    self._log(f"  asking Hermes ({label})...", "dim")
                     response = self.hermes_fn(action["prompt"])
+                    elapsed = time.time() - start_ts
+                    self._log(f"  Hermes replied in {elapsed:.0f}s", "dim")
                     if response and len(response) > 5:
                         m = re.match(r'\[(happy|curious|surprised|neutral|thinking)\]', response)
                         if m and m.group(1) != "neutral":
