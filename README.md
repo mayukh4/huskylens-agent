@@ -2,6 +2,9 @@
 
 A matrix-style AI face for Raspberry Pi 5 that gives [Hermes Agent](https://github.com/NousResearch/hermes-agent) a physical presence — eyes (HuskyLens V2 camera over I2C), a voice (OpenAI Whisper + TTS), and a face (Three.js holographic render on a DSI touchscreen). TARS personality from *Interstellar*. Humour setting at 75%.
 
+ <img width="765" height="574" alt="Screenshot 2026-04-16 at 8 57 12 AM" src="https://github.com/user-attachments/assets/3f0a72e9-c29c-4e9e-9ca5-218bd9099c51" />
+
+
 Packaged as a [Hermes skill](https://hermes-agent.nousresearch.com/docs/developer-guide/creating-skills/) — drop it in `~/.hermes/skills/hardware/tars-vision/` and Hermes discovers it on startup.
 
 Built for [@MayukhBuilds](https://www.youtube.com/@MayukhBuilds).
